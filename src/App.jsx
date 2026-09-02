@@ -5,60 +5,54 @@ import './App.css'
 
 function App() {
   const [tracks, setTracks] = useState([])
-  const [view, setView] = useState('form')
   const [selectedId, setSelectedId] = useState(null)
 
   function handleAddTrack(track) {
-    setTracks((prev) => [...prev, { ...track, id: Date.now() }])
-    setView('table')
+    const newTrack = { ...track, id: Date.now() }
+    setTracks((prev) => [...prev, newTrack])
+    setSelectedId(newTrack.id)
   }
 
   const selectedTrack = tracks.find((track) => track.id === selectedId)
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className="topbar">
         <h1>
           Spookify <span className="accent">Playlist Manager</span>
         </h1>
-        <p>Register a track to build out your playlist registry.</p>
       </header>
 
-      <main className="app-main">
-        <div className="view-tabs">
-          <button
-            type="button"
-            className={view === 'form' ? 'tab active' : 'tab'}
-            onClick={() => setView('form')}
-          >
-            Add Track Form
-          </button>
-          <button
-            type="button"
-            className={view === 'table' ? 'tab active' : 'tab'}
-            onClick={() => setView('table')}
-          >
-            Registry Table View ({tracks.length})
-          </button>
-        </div>
-
-        {view === 'form' ? (
-          <section className="card">
+      <div className="workspace">
+        <aside className="sidebar">
+          <div className="sidebar-card">
             <h2>Add New Track</h2>
             <PlaylistForm onAddTrack={handleAddTrack} />
-          </section>
-        ) : (
-          <section className="card">
-            <h2>Registered Tracks</h2>
+          </div>
+        </aside>
+
+        <main className="main-content">
+          <div className="main-header">
+            <div>
+              <h2>Registry</h2>
+              <p className="main-subtitle">
+                {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'} registered
+              </p>
+            </div>
             {selectedTrack && (
               <p className="selected-hint">
                 Selected: <strong>{selectedTrack.title}</strong> by {selectedTrack.artist}
               </p>
             )}
-            <RegistryTable tracks={tracks} selectedId={selectedId} onSelectRow={setSelectedId} />
-          </section>
-        )}
-      </main>
+          </div>
+
+          <div className="main-scroll">
+            <div className="registry-panel">
+              <RegistryTable tracks={tracks} selectedId={selectedId} onSelectRow={setSelectedId} />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
