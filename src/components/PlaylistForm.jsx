@@ -98,11 +98,11 @@ function validate(values) {
   }
 
   if (values.rating === '') {
-    errors.rating = 'Rating / BPM is required.'
+    errors.rating = 'Rating / BPM must be between 1 and 100.'
   } else {
     const rating = Number(values.rating)
     if (Number.isNaN(rating) || rating < 1 || rating > 100) {
-      errors.rating = 'Enter a value between 1 and 100.'
+      errors.rating = 'Rating / BPM must be between 1 and 100.'
     }
   }
 
@@ -125,6 +125,26 @@ function PlaylistForm({ onAddTrack }) {
     const { name, value } = event.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => ({ ...prev, [name]: undefined }))
+  }
+
+  function handleRatingChange(event) {
+    const { value } = event.target
+
+    if (value === '') {
+      setFormData((prev) => ({ ...prev, rating: '' }))
+      setErrors((prev) => ({ ...prev, rating: undefined }))
+      return
+    }
+
+    const numericValue = Number(value)
+    if (Number.isNaN(numericValue)) {
+      return
+    }
+
+    // Clamp on every keystroke/paste so a value like "111111111111" can never be typed in.
+    const clamped = Math.min(100, Math.max(1, numericValue))
+    setFormData((prev) => ({ ...prev, rating: String(clamped) }))
+    setErrors((prev) => ({ ...prev, rating: undefined }))
   }
 
   function handleSubmit(event) {
@@ -216,7 +236,7 @@ function PlaylistForm({ onAddTrack }) {
           max="100"
           placeholder="1–100"
           value={formData.rating}
-          onChange={handleChange}
+          onChange={handleRatingChange}
           className={errors.rating ? 'invalid' : ''}
         />
         {errors.rating && <p className="field-error">{errors.rating}</p>}
