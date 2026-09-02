@@ -6,27 +6,43 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import RoleBadge from './RoleBadge.jsx'
 
 const columnHelper = createColumnHelper()
+const ROLE_FILTERS = ['All', 'Creator', 'Listener']
+const GENRE_FILTERS = ['All Genres', 'Pop', 'Rock', 'Indie', 'Jazz', 'K-Pop']
 
-function TrashIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  )
-}
+// Mirrors the column order below so <colgroup> can lock each column to a fixed share of the table width.
+// User Role gets extra room (vs. a plain-text column) to fit the "CREATOR"/"LISTENER" badge without clipping.
+const COLUMN_WIDTHS = ['22%', '11%', '18%', '11%', '20%', '18%']
 
-function RegistryTable({ tracks, selectedId, onSelectRow, onDeleteTrack }) {
+function RegistryTable({ tracks, selectedId, onSelectRow }) {
+  const [roleFilter, setRoleFilter] = useState('All')
+  const [genreFilter, setGenreFilter] = useState('All Genres')
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 4,
   })
 
-  const data = useMemo(() => tracks, [tracks])
+  function handleRoleFilterChange(role) {
+    setRoleFilter(role)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
+
+  function handleGenreFilterChange(event) {
+    setGenreFilter(event.target.value)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
+
+  const data = useMemo(
+    () =>
+      tracks.filter(
+        (track) =>
+          (roleFilter === 'All' || track.role === roleFilter) &&
+          (genreFilter === 'All Genres' || track.genre === genreFilter),
+      ),
+    [tracks, roleFilter, genreFilter],
+  )
 
   const columns = useMemo(
     () => [
@@ -48,26 +64,10 @@ function RegistryTable({ tracks, selectedId, onSelectRow, onDeleteTrack }) {
       }),
       columnHelper.accessor('role', {
         header: 'User Role',
-      }),
-      columnHelper.display({
-        id: 'actions',
-        header: '',
-        cell: (info) => (
-          <button
-            type="button"
-            className="row-delete-btn"
-            aria-label={`Delete ${info.row.original.title}`}
-            onClick={(event) => {
-              event.stopPropagation()
-              onDeleteTrack(info.row.original.id)
-            }}
-          >
-            <TrashIcon />
-          </button>
-        ),
+        cell: (info) => <RoleBadge role={info.getValue()} />,
       }),
     ],
-    [onDeleteTrack],
+    [],
   )
 
   const table = useReactTable({
@@ -79,58 +79,114 @@ function RegistryTable({ tracks, selectedId, onSelectRow, onDeleteTrack }) {
     getPaginationRowModel: getPaginationRowModel(),
   })
 
-  if (tracks.length === 0) {
-    return <p className="empty-state">No tracks yet. Add one from the form to populate the registry.</p>
-  }
+  const filtersActive = roleFilter !== 'All' || genreFilter !== 'All Genres'
 
   return (
     <div className="registry-table-wrap">
-      <table className="registry-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              onClick={() => onSelectRow(row.original.id)}
-              className={row.original.id === selectedId ? 'row-selected' : ''}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="table-toolbar">
+        <div className="toolbar-title">
+          <h2 className="panel-title">Playlist</h2>
+          <span className="tracks-count">
+            {data.length} {data.length === 1 ? 'track' : 'tracks'}
+          </span>
+        </div>
 
-      <div className="pagination-bar">
-        <button
-          type="button"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </button>
-        <span className="page-counter">
-          Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
-        </span>
-        <button
-          type="button"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </button>
+        {tracks.length > 0 && (
+          <div className="filter-controls">
+            <div className="role-filter" role="group" aria-label="Filter by user role">
+              {ROLE_FILTERS.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  className={role === roleFilter ? 'filter-btn active' : 'filter-btn'}
+                  onClick={() => handleRoleFilterChange(role)}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+
+            <select
+              className="genre-select"
+              aria-label="Filter by genre"
+              value={genreFilter}
+              onChange={handleGenreFilterChange}
+            >
+              {GENRE_FILTERS.map((genre) => (
+                <option key={genre} value={genre}>
+                  {genre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
+
+      {tracks.length === 0 ? (
+        <p className="empty-state">No tracks yet. Add one from the form to populate the registry.</p>
+      ) : data.length === 0 ? (
+        <p className="empty-state">
+          {filtersActive ? 'No tracks match the selected filters.' : 'No tracks yet.'}
+        </p>
+      ) : (
+        <>
+          <div className="table-scroll">
+            <table className="registry-table">
+              <colgroup>
+                {COLUMN_WIDTHS.map((width, index) => (
+                  <col key={index} style={{ width }} />
+                ))}
+              </colgroup>
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th key={header.id} title={String(header.column.columnDef.header)}>
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    onClick={() => onSelectRow(row.original.id)}
+                    className={row.original.id === selectedId ? 'row-selected' : ''}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} title={String(cell.getValue())}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pagination-bar">
+            <button
+              type="button"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </button>
+            <span className="page-counter">
+              Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+            </span>
+            <button
+              type="button"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
