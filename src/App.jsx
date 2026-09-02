@@ -1,13 +1,19 @@
 import { useState } from 'react'
 import PlaylistForm from './components/PlaylistForm.jsx'
+import RegistryTable from './components/RegistryTable.jsx'
 import './App.css'
 
 function App() {
   const [tracks, setTracks] = useState([])
+  const [view, setView] = useState('form')
+  const [selectedId, setSelectedId] = useState(null)
 
   function handleAddTrack(track) {
     setTracks((prev) => [...prev, { ...track, id: Date.now() }])
+    setView('table')
   }
+
+  const selectedTrack = tracks.find((track) => track.id === selectedId)
 
   return (
     <div className="app-shell">
@@ -19,37 +25,39 @@ function App() {
       </header>
 
       <main className="app-main">
-        <section className="card">
-          <h2>Add New Track</h2>
-          <PlaylistForm onAddTrack={handleAddTrack} />
-        </section>
+        <div className="view-tabs">
+          <button
+            type="button"
+            className={view === 'form' ? 'tab active' : 'tab'}
+            onClick={() => setView('form')}
+          >
+            Add Track Form
+          </button>
+          <button
+            type="button"
+            className={view === 'table' ? 'tab active' : 'tab'}
+            onClick={() => setView('table')}
+          >
+            Registry Table View ({tracks.length})
+          </button>
+        </div>
 
-        <section className="card">
-          <h2>Registered Tracks ({tracks.length})</h2>
-          {tracks.length === 0 ? (
-            <p className="empty-state">No tracks yet. Fill out the form to add your first entry.</p>
-          ) : (
-            <ul className="track-list">
-              {tracks.map((track) => (
-                <li key={track.id} className="track-item">
-                  <div className="track-item-main">
-                    <span className="track-title">{track.title}</span>
-                    <span className="track-genre">{track.genre}</span>
-                  </div>
-                  <div className="track-item-meta">
-                    <span>{track.artist}</span>
-                    <span>&bull;</span>
-                    <span>{track.label}</span>
-                    <span>&bull;</span>
-                    <span>{track.rating} BPM</span>
-                    <span>&bull;</span>
-                    <span>{track.role}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {view === 'form' ? (
+          <section className="card">
+            <h2>Add New Track</h2>
+            <PlaylistForm onAddTrack={handleAddTrack} />
+          </section>
+        ) : (
+          <section className="card">
+            <h2>Registered Tracks</h2>
+            {selectedTrack && (
+              <p className="selected-hint">
+                Selected: <strong>{selectedTrack.title}</strong> by {selectedTrack.artist}
+              </p>
+            )}
+            <RegistryTable tracks={tracks} selectedId={selectedId} onSelectRow={setSelectedId} />
+          </section>
+        )}
       </main>
     </div>
   )
